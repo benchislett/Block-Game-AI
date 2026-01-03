@@ -1,6 +1,7 @@
 #include "game.hpp"
 #include <chrono>
 #include <algorithm>
+#include <iostream>
 
 namespace BlockGame {
 
@@ -42,28 +43,18 @@ bool Game::canPlace(int handIndex, int row, int col) const {
     if (handIndex < 0 || handIndex >= HAND_SIZE || handUsed_[handIndex]) {
         return false;
     }
-    return canPlacePiece(hand_[handIndex], row, col);
+    return board_.canPlacePiece(hand_[handIndex], row, col);
 }
 
-bool Game::canPlacePiece(int pieceIndex, int row, int col) const {
-    const Piece& piece = getPiece(pieceIndex);
-    Board::Mask mask = piece.shiftTo(row, col);
-    if (mask == 0) return false;  // Out of bounds
-    return board_.canPlace(mask);
+bool Game::canPlacePiece(int pieceType, int row, int col) const {
+    return board_.canPlacePiece(pieceType, row, col);
 }
 
 std::vector<Move> Game::getLegalMoves(int handIndex) const {
-    std::vector<Move> moves;
     if (handIndex < 0 || handIndex >= HAND_SIZE || handUsed_[handIndex]) {
-        return moves;
+        return {};
     }
-
-    const Piece& piece = getPiece(hand_[handIndex]);
-    MoveGen::forEachValidPlacement(board_, piece, [&](int row, int col, Board::Mask mask) {
-        moves.push_back({handIndex, row, col, mask});
-    });
-    
-    return moves;
+    return board_.getLegalMoves(hand_[handIndex]);
 }
 
 std::vector<Move> Game::getAllLegalMoves() const {
@@ -80,8 +71,7 @@ std::vector<Move> Game::getAllLegalMoves() const {
 bool Game::hasLegalMoves() const {
     for (int i = 0; i < HAND_SIZE; ++i) {
         if (!handUsed_[i]) {
-            const Piece& piece = getPiece(hand_[i]);
-            if (MoveGen::hasValidPlacement(board_, piece)) {
+            if (board_.countValidPlacements(hand_[i]) > 0) {
                 return true;
             }
         }
@@ -89,16 +79,29 @@ bool Game::hasLegalMoves() const {
     return false;
 }
 
-int Game::makeMove(const Move& move) {
-    if (gameOver_ || move.pieceIndex < 0 || move.pieceIndex >= HAND_SIZE || 
-        handUsed_[move.pieceIndex]) {
+int Game::makeMove(const Move& move, bool drawNewHand) {
+    if (gameOver_) {
+        return 0;
+    }
+
+    // Find the hand index for this move
+    int handIndex = -1;
+    for (int i = 0; i < HAND_SIZE; ++i) {
+        if (!handUsed_[i] && hand_[i] == move.pieceType) {
+            handIndex = i;
+            break;
+        }
+    }
+
+    if (handIndex == -1) {
+        // This move is not valid for the current hand
         return 0;
     }
     
-    return placePiece(move.pieceIndex, move.row, move.col);
+    return placePiece(handIndex, move.row, move.col, drawNewHand);
 }
 
-int Game::placePiece(int handIndex, int row, int col) {
+int Game::placePiece(int handIndex, int row, int col, bool drawNewHand) {
     if (!canPlace(handIndex, row, col)) {
         return 0;
     }
@@ -106,24 +109,26 @@ int Game::placePiece(int handIndex, int row, int col) {
     const Piece& piece = getPiece(hand_[handIndex]);
     Board::Mask mask = piece.shiftTo(row, col);
     
-    // Place the piece
-    board_.place(mask);
+    // Delegate to board for modification and line clearing
+    int linesCleared = board_.placeAndClear(mask);
+    
+    // Update game state
+    commitMove(handIndex, linesCleared, drawNewHand);
+    
+    return calculateClearScore(linesCleared);
+}
+
+void Game::commitMove(int handIndex, int linesCleared, bool drawNewHand) {
+    score_ += calculateClearScore(linesCleared);
     handUsed_[handIndex] = true;
     
-    // Clear full lines and calculate score
-    int linesCleared = board_.clearFullLines();
-    int pointsEarned = calculateClearScore(linesCleared);
-    score_ += pointsEarned;
-    
-    // Check if all pieces placed or game over
     bool allPlaced = std::all_of(handUsed_.begin(), handUsed_.end(), [](bool b) { return b; });
-    if (allPlaced) {
+    
+    if (allPlaced && drawNewHand) {
         drawHand();
-    } else {
+    } else if (!allPlaced) {
         checkGameOver();
     }
-    
-    return pointsEarned;
 }
 
 void Game::newTurn() {
@@ -139,32 +144,5 @@ void Game::checkGameOver() {
 int Game::calculateClearScore(int linesCleared) {
     return linesCleared * linesCleared * 8;
 }
-
-namespace MoveGen {
-
-int countValidPlacements(const Board& board, const Piece& piece) {
-    int count = 0;
-    forEachValidPlacement(board, piece, [&](int, int, Board::Mask) {
-        count++;
-    });
-    return count;
-}
-
-bool hasValidPlacement(const Board& board, const Piece& piece) {
-    const int maxRow = 8 - piece.height;
-    const int maxCol = 8 - piece.width;
-    
-    for (int row = 0; row <= maxRow; ++row) {
-        for (int col = 0; col <= maxCol; ++col) {
-            Board::Mask mask = piece.shiftTo(row, col);
-            if (board.canPlace(mask)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-} // namespace MoveGen
 
 } // namespace BlockGame

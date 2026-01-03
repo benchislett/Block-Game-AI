@@ -7,6 +7,9 @@
 
 namespace BlockGame {
 
+// Forward declarations
+class Board;
+
 /**
  * A piece is defined by:
  * - A base bitmask (origin at top-left of piece bounding box at position 0,0)

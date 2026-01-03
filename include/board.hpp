@@ -3,8 +3,25 @@
 #include <cstdint>
 #include <array>
 #include <string>
+#include <vector>
 
 namespace BlockGame {
+
+class Board;
+
+/**
+ * Represents a move: placing a piece type at a position
+ */
+struct Move {
+    int pieceType;   // The kind of piece (e.g., SQUARE_2X2)
+    int row;
+    int col;
+    uint64_t mask;  // Precomputed shifted mask
+
+    bool operator==(const Move& other) const {
+        return pieceType == other.pieceType && row == other.row && col == other.col;
+    }
+};
 
 /**
  * 8x8 board represented as a single 64-bit value.
@@ -40,11 +57,20 @@ public:
     [[nodiscard]] bool canPlace(Mask pieceMask) const {
         return (data_ & pieceMask) == 0;
     }
+    
+    // High-level move generation and validation methods
+    // These look up the Piece by type internally
+    [[nodiscard]] bool canPlacePiece(int pieceType, int row, int col) const;
+    [[nodiscard]] std::vector<Move> getLegalMoves(int pieceType) const;
+    [[nodiscard]] int countValidPlacements(int pieceType) const;
 
-    // Place a piece (OR operation)
+    // Place a piece (OR operation), does NOT clear lines
     void place(Mask pieceMask) {
         data_ |= pieceMask;
     }
+
+    // Place a piece and clear full lines, returns number of lines cleared
+    int placeAndClear(Mask pieceMask);
 
     // Check which rows and columns are full, returns masks
     [[nodiscard]] uint8_t getFullRows() const;

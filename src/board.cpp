@@ -1,13 +1,15 @@
 #include "board.hpp"
+#include "pieces.hpp"
+#include <bitset>
 #include <sstream>
 
 namespace BlockGame {
 
 uint8_t Board::getFullRows() const {
     uint8_t fullRows = 0;
-    for (int row = 0; row < 8; ++row) {
-        if ((data_ & rowMask(row)) == rowMask(row)) {
-            fullRows |= (1 << row);
+    for (int r = 0; r < 8; ++r) {
+        if ((data_ & rowMask(r)) == rowMask(r)) {
+            fullRows |= (1 << r);
         }
     }
     return fullRows;
@@ -15,9 +17,9 @@ uint8_t Board::getFullRows() const {
 
 uint8_t Board::getFullCols() const {
     uint8_t fullCols = 0;
-    for (int col = 0; col < 8; ++col) {
-        if ((data_ & colMask(col)) == colMask(col)) {
-            fullCols |= (1 << col);
+    for (int c = 0; c < 8; ++c) {
+        if ((data_ & colMask(c)) == colMask(c)) {
+            fullCols |= (1 << c);
         }
     }
     return fullCols;
@@ -27,21 +29,79 @@ int Board::clearFullLines() {
     uint8_t fullRows = getFullRows();
     uint8_t fullCols = getFullCols();
     
-    // Clear full rows
-    for (int row = 0; row < 8; ++row) {
-        if (fullRows & (1 << row)) {
-            data_ &= ~rowMask(row);
+    if (fullRows == 0 && fullCols == 0) {
+        return 0;
+    }
+    
+    int linesCleared = 0;
+    Mask keepMask = FULL_BOARD;
+    
+    // Clear rows
+    for (int r = 0; r < 8; ++r) {
+        if (fullRows & (1 << r)) {
+            keepMask &= ~rowMask(r);
+            linesCleared++;
         }
     }
     
-    // Clear full columns
-    for (int col = 0; col < 8; ++col) {
-        if (fullCols & (1 << col)) {
-            data_ &= ~colMask(col);
+    // Clear cols
+    for (int c = 0; c < 8; ++c) {
+        if (fullCols & (1 << c)) {
+            keepMask &= ~colMask(c);
+            linesCleared++;
         }
     }
     
-    return __builtin_popcount(fullRows) + __builtin_popcount(fullCols);
+    data_ &= keepMask;
+    return linesCleared;
+}
+
+int Board::placeAndClear(Mask pieceMask) {
+    place(pieceMask);
+    return clearFullLines();
+}
+
+bool Board::canPlacePiece(int pieceType, int row, int col) const {
+    const Piece& piece = getPiece(pieceType);
+    Board::Mask mask = piece.shiftTo(row, col);
+    if (mask == 0) return false;  // Out of bounds
+    return canPlace(mask);
+}
+
+std::vector<Move> Board::getLegalMoves(int pieceType) const {
+    std::vector<Move> moves;
+    const Piece& piece = getPiece(pieceType);
+    
+    const int maxRow = 8 - piece.height;
+    const int maxCol = 8 - piece.width;
+    
+    for (int row = 0; row <= maxRow; ++row) {
+        for (int col = 0; col <= maxCol; ++col) {
+            Board::Mask mask = piece.shiftTo(row, col);
+            if (canPlace(mask)) {
+                moves.push_back({pieceType, row, col, mask});
+            }
+        }
+    }
+    return moves;
+}
+
+int Board::countValidPlacements(int pieceType) const {
+    int count = 0;
+    const Piece& piece = getPiece(pieceType);
+    
+    const int maxRow = 8 - piece.height;
+    const int maxCol = 8 - piece.width;
+    
+    for (int row = 0; row <= maxRow; ++row) {
+        for (int col = 0; col <= maxCol; ++col) {
+            Board::Mask mask = piece.shiftTo(row, col);
+            if (canPlace(mask)) {
+                count++;
+            }
+        }
+    }
+    return count;
 }
 
 std::string Board::toString() const {
