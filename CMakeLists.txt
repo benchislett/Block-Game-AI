@@ -23,3 +23,7 @@ target_link_libraries(block_game PRIVATE game_core)
 # Simulator executable
 add_executable(simulator src/simulator.cpp)
 target_link_libraries(simulator PRIVATE game_core)
+
+# Perft executable
+add_executable(perft src/perft.cpp)
+target_link_libraries(perft PRIVATE game_core)
