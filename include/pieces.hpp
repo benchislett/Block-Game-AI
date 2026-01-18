@@ -41,6 +41,10 @@ struct Piece {
             static_cast<unsigned>(col) > static_cast<unsigned>(shiftTable.maxCol)) {
             return 0;
         }
+        return shiftToUnsafe(row, col);
+    }
+
+    [[nodiscard]] inline Board::Mask shiftToUnsafe(int row, int col) const {
         return shiftTable.masks[row * 8 + col];
     }
 

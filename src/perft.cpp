@@ -30,13 +30,13 @@ uint64_t countTerminalNodes(const Board& board, int depth, int max_depth, const 
 
     // Try all pieces
     for (const auto& piece : pieces) {
-        // Try all 8x8 positions
-        for (int row = 0; row < 8; ++row) {
-            for (int col = 0; col < 8; ++col) {
-                Board::Mask mask = piece.shiftTo(row, col);
-                
-                // Check if placement is valid
-                if (mask != 0 && board.canPlace(mask)) {
+        // Try all positions
+        for (int row = 0; row < piece.shiftTable.maxRow + 1; ++row) {
+            for (int col = 0; col < piece.shiftTable.maxCol + 1; ++col) {
+                Board::Mask mask = piece.shiftToUnsafe(row, col);
+
+                // Check if placement fits on the board
+                if (board.canPlace(mask)) {
                     can_move = true;
                     
                     Board next_board = board;

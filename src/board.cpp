@@ -59,12 +59,10 @@ std::vector<Move> Board::getLegalMoves(int pieceType) const {
     std::vector<Move> moves;
     const Piece& piece = getPiece(pieceType);
     
-    const int maxRow = 8 - piece.height;
-    const int maxCol = 8 - piece.width;
     
-    for (int row = 0; row <= maxRow; ++row) {
-        for (int col = 0; col <= maxCol; ++col) {
-            Board::Mask mask = piece.shiftTo(row, col);
+    for (int row = 0; row <= piece.shiftTable.maxRow; ++row) {
+        for (int col = 0; col <= piece.shiftTable.maxCol; ++col) {
+            Board::Mask mask = piece.shiftToUnsafe(row, col);
             if (canPlace(mask)) {
                 moves.push_back({pieceType, row, col, mask});
             }
