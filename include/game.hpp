@@ -23,7 +23,7 @@ public:
     [[nodiscard]] const Board& board() const { return board_; }
     [[nodiscard]] int score() const { return score_; }
     [[nodiscard]] bool isGameOver() const { return gameOver_; }
-    [[nodiscard]] const std::array<int, HAND_SIZE>& hand() const { return hand_; }
+    [[nodiscard]] const std::array<PieceType, HAND_SIZE>& hand() const { return hand_; }
     [[nodiscard]] const std::array<bool, HAND_SIZE>& handUsed() const { return handUsed_; }
     [[nodiscard]] int turnNumber() const { return turnNumber_; }
 
@@ -31,7 +31,7 @@ public:
     [[nodiscard]] bool canPlace(int handIndex, int row, int col) const;
     
     // Check if a piece (by piece type index) can be placed at position
-    [[nodiscard]] bool canPlacePiece(int pieceType, int row, int col) const;
+    [[nodiscard]] bool canPlacePiece(PieceType type, int row, int col) const;
 
     // Generate all legal moves for a specific hand piece
     [[nodiscard]] std::vector<Move> getLegalMoves(int handIndex) const;
@@ -64,7 +64,7 @@ public:
 
 // private:
     Board board_;
-    std::array<int, HAND_SIZE> hand_;        // Piece types in hand
+    std::array<PieceType, HAND_SIZE> hand_;        // Piece types in hand
     std::array<bool, HAND_SIZE> handUsed_;   // Which pieces have been placed
     int score_;
     int turnNumber_;

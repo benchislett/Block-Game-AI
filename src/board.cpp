@@ -43,44 +43,46 @@ int Board::clearFullLines() {
     return __builtin_popcountll(col_ind) + __builtin_popcountll(row_ind);
 }
 
-int Board::placeAndClear(Mask pieceMask) {
+int Board::placeAndClear(uint64_t pieceMask) {
     place(pieceMask);
     return clearFullLines();
 }
 
-bool Board::canPlacePiece(int pieceType, int row, int col) const {
-    const Piece& piece = getPiece(pieceType);
-    Board::Mask mask = piece.shiftTo(row, col);
+bool Board::canPlacePiece(PieceType type, int row, int col) const {
+    const Piece& piece = getPiece(type);
+    uint64_t mask = piece.shiftTo(row, col);
     if (mask == 0) return false;  // Out of bounds
     return canPlace(mask);
 }
 
-std::vector<Move> Board::getLegalMoves(int pieceType) const {
+std::vector<Move> Board::getLegalMoves(PieceType type) const {
+    return getLegalMoves(getPiece(type));
+}
+
+std::vector<Move> Board::getLegalMoves(const Piece& piece) const {
     std::vector<Move> moves;
-    const Piece& piece = getPiece(pieceType);
-    
     
     for (int row = 0; row <= piece.shiftTable.maxRow; ++row) {
         for (int col = 0; col <= piece.shiftTable.maxCol; ++col) {
-            Board::Mask mask = piece.shiftToUnsafe(row, col);
+            uint64_t mask = piece.shiftToUnsafe(row, col);
             if (canPlace(mask)) {
-                moves.push_back({pieceType, row, col, mask});
+                moves.push_back({piece.type, row, col, mask});
             }
         }
     }
     return moves;
 }
 
-int Board::countValidPlacements(int pieceType) const {
+int Board::countValidPlacements(PieceType type) const {
     int count = 0;
-    const Piece& piece = getPiece(pieceType);
+    const Piece& piece = getPiece(type);
     
     const int maxRow = 8 - piece.height;
     const int maxCol = 8 - piece.width;
     
     for (int row = 0; row <= maxRow; ++row) {
         for (int col = 0; col <= maxCol; ++col) {
-            Board::Mask mask = piece.shiftTo(row, col);
+            uint64_t mask = piece.shiftTo(row, col);
             if (canPlace(mask)) {
                 count++;
             }

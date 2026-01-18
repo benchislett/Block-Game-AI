@@ -32,7 +32,7 @@ void Game::reset() {
 void Game::drawHand() {
     std::uniform_int_distribution<int> dist(0, NUM_PIECES - 1);
     for (int i = 0; i < HAND_SIZE; ++i) {
-        hand_[i] = dist(rng_);
+        hand_[i] = static_cast<PieceType>(dist(rng_));
         handUsed_[i] = false;
     }
     turnNumber_++;
@@ -46,8 +46,8 @@ bool Game::canPlace(int handIndex, int row, int col) const {
     return board_.canPlacePiece(hand_[handIndex], row, col);
 }
 
-bool Game::canPlacePiece(int pieceType, int row, int col) const {
-    return board_.canPlacePiece(pieceType, row, col);
+bool Game::canPlacePiece(PieceType type, int row, int col) const {
+    return board_.canPlacePiece(type, row, col);
 }
 
 std::vector<Move> Game::getLegalMoves(int handIndex) const {
@@ -87,7 +87,7 @@ int Game::makeMove(const Move& move, bool drawNewHand) {
     // Find the hand index for this move
     int handIndex = -1;
     for (int i = 0; i < HAND_SIZE; ++i) {
-        if (!handUsed_[i] && hand_[i] == move.pieceType) {
+        if (!handUsed_[i] && hand_[i] == move.type) {
             handIndex = i;
             break;
         }
@@ -107,7 +107,7 @@ int Game::placePiece(int handIndex, int row, int col, bool drawNewHand) {
     }
 
     const Piece& piece = getPiece(hand_[handIndex]);
-    Board::Mask mask = piece.shiftTo(row, col);
+    uint64_t mask = piece.shiftTo(row, col);
     
     // Delegate to board for modification and line clearing
     int linesCleared = board_.placeAndClear(mask);

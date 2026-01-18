@@ -4,22 +4,21 @@
 #include <array>
 #include <string>
 #include <vector>
+#include "types.hpp"
 
 namespace BlockGame {
-
-class Board;
 
 /**
  * Represents a move: placing a piece type at a position
  */
 struct Move {
-    int pieceType;   // The kind of piece (e.g., SQUARE_2X2)
+    PieceType type;   // The kind of piece (e.g., SQUARE_2X2)
     int row;
     int col;
     uint64_t mask;  // Precomputed shifted mask
 
     bool operator==(const Move& other) const {
-        return pieceType == other.pieceType && row == other.row && col == other.col;
+        return type == other.type && row == other.row && col == other.col;
     }
 };
 
@@ -30,13 +29,11 @@ struct Move {
  */
 class Board {
 public:
-    using Mask = uint64_t;
-
     Board() : data_(0) {}
-    explicit Board(Mask data) : data_(data) {}
+    explicit Board(uint64_t data) : data_(data) {}
 
     // Core bit operations
-    [[nodiscard]] Mask data() const { return data_; }
+    [[nodiscard]] uint64_t data() const { return data_; }
     
     [[nodiscard]] bool isEmpty() const { return data_ == 0; }
     [[nodiscard]] bool isFull() const { return data_ == FULL_BOARD; }
@@ -54,23 +51,24 @@ public:
     }
 
     // Check if placing a piece (represented as mask shifted to position) is valid
-    [[nodiscard]] bool canPlace(Mask pieceMask) const {
+    [[nodiscard]] bool canPlace(uint64_t pieceMask) const {
         return (data_ & pieceMask) == 0;
     }
     
     // High-level move generation and validation methods
     // These look up the Piece by type internally
-    [[nodiscard]] bool canPlacePiece(int pieceType, int row, int col) const;
-    [[nodiscard]] std::vector<Move> getLegalMoves(int pieceType) const;
-    [[nodiscard]] int countValidPlacements(int pieceType) const;
+    [[nodiscard]] bool canPlacePiece(PieceType type, int row, int col) const;
+    [[nodiscard]] std::vector<Move> getLegalMoves(PieceType type) const;
+    [[nodiscard]] std::vector<Move> getLegalMoves(const Piece& piece) const;
+    [[nodiscard]] int countValidPlacements(PieceType type) const;
 
     // Place a piece (OR operation), does NOT clear lines
-    void place(Mask pieceMask) {
+    void place(uint64_t pieceMask) {
         data_ |= pieceMask;
     }
 
     // Place a piece and clear full lines, returns number of lines cleared
-    int placeAndClear(Mask pieceMask);
+    int placeAndClear(uint64_t pieceMask);
     
     // Clear full rows and columns, returns count of cleared lines
     int clearFullLines();
@@ -79,17 +77,17 @@ public:
     [[nodiscard]] std::string toString() const;
 
     // Precomputed row and column masks
-    static constexpr Mask ROW_MASK = 0xFF;  // First row
-    static constexpr Mask COL_MASK = 0x0101010101010101ULL;  // First column
-    static constexpr Mask FULL_BOARD = 0xFFFFFFFFFFFFFFFFULL;
+    static constexpr uint64_t ROW_MASK = 0xFF;  // First row
+    static constexpr uint64_t COL_MASK = 0x0101010101010101ULL;  // First column
+    static constexpr uint64_t FULL_BOARD = 0xFFFFFFFFFFFFFFFFULL;
 
-    static constexpr Mask rowMask(int row) { return ROW_MASK << (row * 8); }
-    static constexpr Mask colMask(int col) { return COL_MASK << col; }
+    static constexpr uint64_t rowMask(int row) { return ROW_MASK << (row * 8); }
+    static constexpr uint64_t colMask(int col) { return COL_MASK << col; }
 
 private:
-    Mask data_;
+    uint64_t data_;
 
-    static constexpr Mask bitAt(int row, int col) {
+    static constexpr uint64_t bitAt(int row, int col) {
         return 1ULL << (row * 8 + col);
     }
 };
