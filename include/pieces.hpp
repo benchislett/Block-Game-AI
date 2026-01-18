@@ -10,36 +10,38 @@ namespace BlockGame {
 // Forward declarations
 class Board;
 
+// Precomputed shifted masks for a piece type at each board position
+// Index: row * 8 + col (0-63 for 8x8 board)
+// Value: shifted mask, or 0 if out of bounds
+struct PieceShiftTable {
+    std::array<Board::Mask, 64> masks;  // Precomputed shifted masks for each position
+    int maxRow;                          // Maximum valid row (8 - height)
+    int maxCol;                          // Maximum valid col (8 - width)
+};
+
 /**
  * A piece is defined by:
  * - A base bitmask (origin at top-left of piece bounding box at position 0,0)
  * - Width and height (bounding box dimensions)
  * - Name for display
+ * - Precomputed shift table for fast placement
  */
 struct Piece {
     Board::Mask baseMask;   // Piece shape at origin (0,0)
     int width;              // Bounding box width
     int height;             // Bounding box height
     std::string name;       // Display name
+    PieceShiftTable shiftTable;  // Precomputed shifted masks
 
     // Shift piece mask to a board position (row, col)
     // Returns 0 if piece would be out of bounds
-    [[nodiscard]] Board::Mask shiftTo(int row, int col) const {
-        if (row < 0 || col < 0 || row + height > 8 || col + width > 8) {
+    [[nodiscard]] inline Board::Mask shiftTo(int row, int col) const {
+        // Use unsigned comparison to check both < 0 and > max in one check
+        if (static_cast<unsigned>(row) > static_cast<unsigned>(shiftTable.maxRow) ||
+            static_cast<unsigned>(col) > static_cast<unsigned>(shiftTable.maxCol)) {
             return 0;
         }
-        // Base mask has pieces at rows 0..height-1, cols 0..width-1
-        // We need to shift to row, col
-        // Row shift: multiply by 8 for each row
-        // Col shift: add col bits
-        Board::Mask shifted = 0;
-        for (int r = 0; r < height; ++r) {
-            // Extract row r of the base mask
-            Board::Mask rowBits = (baseMask >> (r * 8)) & 0xFF;
-            // Shift to target position
-            shifted |= rowBits << ((row + r) * 8 + col);
-        }
-        return shifted;
+        return shiftTable.masks[row * 8 + col];
     }
 
     // Get string representation of piece shape
