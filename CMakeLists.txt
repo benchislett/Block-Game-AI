@@ -8,6 +8,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Optimization flags for release builds
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 
+# Profiling build type (optimized + debug symbols for perf/Instruments)
+set(CMAKE_CXX_FLAGS_PROFILE "-O3 -march=native -g -fno-omit-frame-pointer -DNDEBUG")
+set(CMAKE_EXE_LINKER_FLAGS_PROFILE "")
+
+# gprof profiling build type (instrumented)
+set(CMAKE_CXX_FLAGS_GPROF "-O2 -pg -g -DNDEBUG")
+set(CMAKE_EXE_LINKER_FLAGS_GPROF "-pg")
+
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 # Core game library
 add_library(game_core STATIC
     src/board.cpp

@@ -71,10 +71,6 @@ public:
 
     // Place a piece and clear full lines, returns number of lines cleared
     int placeAndClear(Mask pieceMask);
-
-    // Check which rows and columns are full, returns masks
-    [[nodiscard]] uint8_t getFullRows() const;
-    [[nodiscard]] uint8_t getFullCols() const;
     
     // Clear full rows and columns, returns count of cleared lines
     int clearFullLines();

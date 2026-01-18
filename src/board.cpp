@@ -2,58 +2,45 @@
 #include "pieces.hpp"
 #include <bitset>
 #include <sstream>
+#include <stdint.h>
 
 namespace BlockGame {
 
-uint8_t Board::getFullRows() const {
-    uint8_t fullRows = 0;
-    for (int r = 0; r < 8; ++r) {
-        if ((data_ & rowMask(r)) == rowMask(r)) {
-            fullRows |= (1 << r);
-        }
-    }
-    return fullRows;
-}
-
-uint8_t Board::getFullCols() const {
-    uint8_t fullCols = 0;
-    for (int c = 0; c < 8; ++c) {
-        if ((data_ & colMask(c)) == colMask(c)) {
-            fullCols |= (1 << c);
-        }
-    }
-    return fullCols;
-}
-
 int Board::clearFullLines() {
-    uint8_t fullRows = getFullRows();
-    uint8_t fullCols = getFullCols();
+    uint64_t c = data_;
+    c &= (c >> 8);
+    c &= (c >> 16);
+    c &= (c >> 32);
+    uint64_t col_ind = c & 0xFF;
+
+    // 2. Row Reduction (Horizontal)
+    // Can execute in parallel with step 1 due to Out-of-Order execution
+    uint64_t r = data_;
+    r &= (r >> 1);
+    r &= (r >> 2);
+    r &= (r >> 4);
+    // 0x0101010101010101 allows us to mask the specific bits (0, 8, 16...) 
+    // AND broadcast the column bits later. We load it once.
+    const uint64_t kBroadcast = 0x0101010101010101ULL;
+    uint64_t row_ind = r & kBroadcast;
+
+    // 3. Mask Generation (The Optimization)
+    // We combine the masks using OR before applying them to the grid.
+    // We force a multiply for the row_mask to use the Multiplier Port (Port 1)
+    // which is likely idle, relieving pressure on the Shift/Add ports.
     
-    if (fullRows == 0 && fullCols == 0) {
-        return 0;
-    }
+    // col_mask: 00000001 -> 01010101
+    uint64_t col_mask = col_ind * kBroadcast; 
     
-    int linesCleared = 0;
-    Mask keepMask = FULL_BOARD;
-    
-    // Clear rows
-    for (int r = 0; r < 8; ++r) {
-        if (fullRows & (1 << r)) {
-            keepMask &= ~rowMask(r);
-            linesCleared++;
-        }
-    }
-    
-    // Clear cols
-    for (int c = 0; c < 8; ++c) {
-        if (fullCols & (1 << c)) {
-            keepMask &= ~colMask(c);
-            linesCleared++;
-        }
-    }
-    
-    data_ &= keepMask;
-    return linesCleared;
+    // row_mask: 0x...0100... -> 0x...FF00...
+    // We use explicit multiplication by 255.
+    uint64_t row_mask = row_ind * 255; 
+
+    // Combine masks to break serial dependency on 'grid'
+    uint64_t total_mask = col_mask | row_mask;
+
+    data_ &= ~total_mask;
+    return __builtin_popcountll(col_ind) + __builtin_popcountll(row_ind);
 }
 
 int Board::placeAndClear(Mask pieceMask) {
