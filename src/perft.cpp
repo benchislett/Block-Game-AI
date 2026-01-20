@@ -55,13 +55,12 @@ uint64_t countTerminalNodes(const Board& board, int depth, int max_depth, const 
     }
 
     if (depth < TranspositionTable::MAX_DEPTH) {
-        int64_t tt_result = tt.query(board.data(), depth);
+        const int64_t tt_result = tt.query(board.data(), depth);
         if (tt_result != -1) {
             return tt_result;
         }
     }
 
-    bool can_move = false;
     uint64_t total_terminal_nodes = 0;
 
     // Try all pieces
@@ -69,11 +68,10 @@ uint64_t countTerminalNodes(const Board& board, int depth, int max_depth, const 
         // Try all positions
         for (int row = 0; row < piece.shiftTable.maxRow + 1; ++row) {
             for (int col = 0; col < piece.shiftTable.maxCol + 1; ++col) {
-                uint64_t mask = piece.shiftToUnsafe(row, col);
+                const uint64_t mask = piece.shiftToUnsafe(row, col);
 
                 // Check if placement fits on the board
                 if (board.canPlace(mask)) {
-                    can_move = true;
                     
                     Board next_board = board;
                     next_board.placeAndClear(mask);
@@ -85,7 +83,7 @@ uint64_t countTerminalNodes(const Board& board, int depth, int max_depth, const 
     }
 
     // If no moves were possible, this is a terminal node (game over state)
-    if (!can_move) {
+    if (total_terminal_nodes == 0) {
         total_terminal_nodes = 1;
     }
     
